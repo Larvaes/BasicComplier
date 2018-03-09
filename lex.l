@@ -15,7 +15,7 @@ int getRegID(char*);
 %}
 
 %%
-[ \t]         ;
+[ \t]         ;             //detect string and return token to bison
 
 {D}+            { yylval = atoi(yytext); return NUM; }
 {H}+h            { yylval = strtol(yytext, NULL, 16); return NUM; }
@@ -41,7 +41,7 @@ $r[a-zA-Z]          { yylval = (int)getRegID(yytext);return REG;printf("%d",yylv
 .                { return yytext[0]; }
 %%
 
-int getRegID(char *input){
+int getRegID(char *input){          //change input register from a-z to id (0-25)
     int result = 0;
     if(input[strlen(input)-1] >= 'A' && input[strlen(input)-1] <= 'Z')
         result = input[strlen(input)-1] - 'A';

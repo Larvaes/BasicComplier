@@ -16,9 +16,8 @@
   int reg[26] = {0};
   int acc = 0;
   int size = 0;
-  int errors = 0;
-
   node *top = NULL;
+  //Functio, variable predefine and include headerfile
 %}
 /* Bison declarations.  */
 %token NUM LINE PUSH POP SHOW LOAD ERROR
@@ -31,51 +30,59 @@
 %% /* The grammar follows.  */
 input:
   %empty
-| input line
-| error line { yyerrok;}
+| input line                // starting symbol
+| error LINE { yyerrok;}    // error handling with missing grammar 
 ;
 line:
   LINE
-| exp LINE  { if(!errors){
-              printf ("= %d\n> ",$1); acc = $1;
-              errors = 0; 
-            }
-          }
-| stack LINE { printf("> ");}
+| exp LINE  { printf ("= %d\n> ",$1); acc = $1; }     // numeric experssion
+| stack LINE { printf ("> "); }                       // stack experssion
 ;
 stack:
   PUSH register { top = Push(top,$2);}
-| POP REG { top = Pop(top, &reg[$2]);}
-| POP TOP { yyerror("ERROR: cannot pop to top"); errors = 0;YYERROR; }
-| POP ACC { yyerror("ERROR: cannot pop to acc"); errors = 0;YYERROR; }
-| POP SIZE { yyerror("ERROR: cannot change size of stack");errors = 0; YYERROR; }
-| SHOW ACC { printf("%d\n",acc);}
-| SHOW REG { printf("%d\n",reg[$2]);}
-| SHOW TOP { if(top == NULL){
-                yyerror("ERROR: Stack is empty"); errors = 0; YYERROR;
+| POP REG { if(top == NULL){                        // detect error if stack is empty
+              yyerror("ERROR: Stack is empty");
+              YYERROR;
+            }
+            else{
+              top = Pop(top, &reg[$2]);
+              }
+          }
+| POP TOP { yyerror("ERROR: cannot pop to top"); YYERROR; }       // detect error if try to chage top with pop
+| POP ACC { yyerror("ERROR: cannot pop to acc"); YYERROR; }       // detect error if try to chage top with acc
+| POP SIZE { yyerror("ERROR: cannot change size of stack"); YYERROR; }   // detect error if try to chage top with size 
+| SHOW ACC { printf("= %d\n",acc); }          //show register, acc ,top of stack, size
+| SHOW REG { printf("= %d\n",reg[$2]); }
+| SHOW TOP { if(top == NULL){                                     // detect if try to print top while stack empty
+                yyerror("ERROR: Stack is empty"); YYERROR;    
               }
               else{
-                printf("%d\n",acc);
+                printf("= %d\n",acc);
               }
             }            
-| SHOW SIZE { printf("%d\n",size);}
-| LOAD REG REG { loadOp(&reg[$2],$3);}
-| LOAD REG TOP {if(top == NULL){
-                  yyerror("ERROR: Stack is empty"); errors = 0; YYERROR;
+| SHOW SIZE { printf("= %d\n",size); }
+| LOAD REG REG { loadOp(&reg[$2],reg[$3]); }                  // load value into register
+| LOAD REG TOP {if(top == NULL){                              // detect if load value from top but top is empty 
+                  yyerror("ERROR: Stack is empty"); YYERROR;
                   }
                 else{
                   loadOp(&reg[$2],$3);
                 }
               }
+| LOAD REG ACC { loadOp(&reg[$2],$3); }
+| LOAD REG SIZE { loadOp(&reg[$2],$3); }
+| LOAD SIZE register { yyerror("ERROR: cannot change size of stack"); YYERROR; }    // detect if try to change top, acc, size
+| LOAD TOP register { yyerror("ERROR: cannot change top of stack"); YYERROR; }
+| LOAD ACC register { yyerror("ERROR: acc should not be changed"); YYERROR; }
 ;
 
 register:
-  REG         { $$ = reg[$1]; }
+  REG         { $$ = reg[$1]; }                   // terminal symbol for each register
 | ACC         { $$ = acc; }
 | TOP         { $$ = top->data; }
 | SIZE        { $$ = size; }
 ;
-exp:
+exp:                                              // grammar for number and experssion
   NUM                { $$ = $1; }
 | register           { $$ = $1; } 
 | NOT exp            { $$ = ~$2; }
@@ -103,7 +110,7 @@ exp:
 ;
 %%
 
-node* Push(node *t, int value){
+node* Push(node *t, int value){                 // push function
   node *q = (node*) malloc (sizeof(node)); 
   q->data = value;
   if(top == NULL){
@@ -118,11 +125,7 @@ node* Push(node *t, int value){
   return t;
 }
 
-node* Pop(node *t, int *element){
-  if(t == NULL){
-    yyerror("ERROR: Stack is empty");
-    return NULL;
-  }
+node* Pop(node *t, int *element){           // pop function
   node *q = t;
   *element = q->data;
   if(t->next)
@@ -134,42 +137,20 @@ node* Pop(node *t, int *element){
   return t;
   
 }
-void loadOp(int *element, int value){
+void loadOp(int *element, int value){     // load function
   *element = value;
 }
 
-// int yylex (void)
-// {
-//   int c;
-
-//   /* Skip white space.  */
-//   while ((c = getchar ()) == ' ' || c == '\t')
-//     continue;
-//   /* Process numbers.  */
-//   if (c == '.' || isdigit (c))
-//     {
-//       ungetc (c, stdin);
-//       scanf ("%lf", &yylval);
-//       return NUM;
-//     }
-//   /* Return end-of-input.  */
-//   if (c == EOF)
-//     return 0;
-//   /* Return a single char.  */
-//   return c;
-// }
-
-void yyerror (char const *s)
+void yyerror (char const *s)              // error message
 {
   fprintf (stderr, "%s \n", s);
   printf("> ");
-  errors++;
 }
 
 int main(void){
     printf("> "); 
     while(1){
-      yyparse();
+      yyparse();                        // strat parser
     }
     return 0; 
 }
